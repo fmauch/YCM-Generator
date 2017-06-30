@@ -369,6 +369,10 @@ def parse_flags(build_log):
     # Used to only bundle filenames with applicable arguments
     filename_flags = ["-o", "-I", "-isystem", "-iquote", "-include", "-imacros", "-isysroot"]
 
+    temp_catkin_regex = re.compile("-I/tmp/tmp[a-zA-Z0-9]+/")
+    catkin_ws_regex = re.compile("-I.*(catkin_workspace|catkin_ws)/")
+    catkin_ws = ''
+
     # Process build log
     for line in build_log:
         if(temp_output.search(line)):
@@ -392,11 +396,20 @@ def parse_flags(build_log):
 
                 continue
 
+            # Find our what the catkin_ws path is
+            if catkin_ws_regex.search(word):
+                catkin_ws = catkin_ws_regex.search(word).group()
+
             # include arguments for this option, if there are any, as a tuple
             if(i != len(words) - 1 and word in filename_flags and words[i + 1][0] != '-'):
                 flags.add((word, words[i + 1]))
+            elif temp_catkin_regex.search(word):
+                # replace the tmp catkin devel/include folder
+                word = temp_catkin_regex.sub(catkin_ws, word)
+                flags.add(word)
             else:
                 flags.add(word)
+
 
     # Only specify one word size (the largest)
     # (Different sizes are used for different files in the linux kernel.)
